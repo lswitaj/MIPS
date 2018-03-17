@@ -17,7 +17,9 @@ n4:	.asciiz "Nie udalo sie otworzyc pliku"
 #s5 = new width
 #s6 = new height
 #s7 = new dopelnie
-
+#t9 = adress of buf of old bmp
+#t8 = adress of buf of new bmp
+#t3 = size new buf
 .text
 main:	la $a0, n1
 	li $v0, 4
@@ -78,7 +80,7 @@ head:	addu $a0, $s1, $0	#read header
 	li $a2, 64 
 	li $v0, 14		#pointer on file[64]
 	syscall
-	
+	lw $t6, header+34	# t6 = old size
 	lw $s3, header + 18
 	lw $s4, header + 22
 	
@@ -104,12 +106,14 @@ after:	li $t0, 3
 	
 	add $t2, $t2, $s7	#width + dopelnienie
 	mult $t2, $s6
-	mflo $t3		#new size!!!!!!
+	mflo $t3		#t3 = new size!!!!!
 	####
 	li $t0, 2
 	div $s0, $t0
 	mfhi $t1
 	beqz $t1, hedOUT
+	
+	
 	
 	sw $s5, header+18	#new width and height
 	sw $s6, header+22
@@ -125,12 +129,74 @@ hedOUT:	li $v0, 15
 	li $a2, 64
 	syscall	
 	
-	################!!!!!!!!!!!!!!!!!!!!!!!
+alloc:	li $v0, 9
+	addu $a0, $t6, $0
+	syscall
+	addu $t9, $v0, $0	#t9 is address of allocated memory
 	
-bmp:	########!!!!!!!!!!
+		
+bmpbuf:	li $v0, 14
+	addu $a0, $s1, $0
+	addu $a1, $t9, $0
+	addu $a2, $t6, $0
+	syscall			#old bmp is in buf which starts at t9
 	
+	beqz $s0, case0
+
+alloc2:	li $v0, 9
+	addu $a0, $t3, $0
+	syscall
+	addu $t8, $v0, $0	#t8 is address of allocated memory
+	
+	beq $s0, 2, case2 
+	
+	
+	
+	j endP
+case2:	addu $t0, $0, $0
+	addi $t1, $s4, -1
+	
+pet1:				#actual byte = t1*width + t0
+	addi $t2, $s3, -3	#t2 = width - 3, because all pixels has 3 bytes
+	sub $t2, $t2, $s7	#t2=t2-dopelnienie 
+pet2:	
+	mult $t1, $s3		
+	mflo $t6		
+	add $t6, $t6, $t2	#t6 = ((t1*width)++) + t2
+	add $t6, $t6, $t9  	#t6 = input buffer address + t6
+	
+	add $t7, $t8, $t0	#t7 = output buffer adress + t0 (loop iterator)
+	
+	lbu $t4, ($t6)		#read and save to buffer 3 pixels
+	sb $t4, ($t7)
+	lbu $t4, 1($t6)
+	sb $t4, 1($t7)
+	lbu $t4, 2($t6)
+	sb $t4, 2($t7)
+	
+	addi $t0, $t0, 3
+	
+	addi $t2, $t2, -1
+	bgez $t2, pet2
+
+	addu $t2, $0, $s7
+dop:	add $t7, $t8, $t0
+	sb $0, ($t7)
+	addi $t0, $t0, 1
+	addi $t2, $t2, -1
+	bgtz $t2 dop
+	
+	addi $t1, $t1, -1
+	bgez $t1, pet1
 ########################################################################################################################	
-	addu $a0, $s2, $0	#close out file
+endP:	
+	li $v0, 15
+	addu $a0, $s2, $0
+	addu $a1, $t8, $0
+	addu $a2, $t3, $0
+	syscall	
+	
+endP0:	addu $a0, $s2, $0	#close out file
 	li $v0, 16	
 	syscall
 	
@@ -150,3 +216,9 @@ error2:	la $a0, n4
 	li $v0, 4
 	syscall
 	j clsIN
+case0:	li $v0, 15
+	addu $a0, $s2, $0
+	addu $a1, $t9, $0
+	addu $a2, $t6, $0
+	syscall	
+	j endP0
