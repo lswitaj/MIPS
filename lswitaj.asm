@@ -80,7 +80,7 @@ head:	addu $a0, $s1, $0	#read header
 	li $a2, 64 
 	li $v0, 14		#pointer on file[64]
 	syscall
-	lw $t6, header+34	# t6 = old size
+	lw $t6, header + 34	# t6 = old size
 	lw $s3, header + 18
 	lw $s4, header + 22
 	
@@ -189,8 +189,7 @@ dop:	add $t7, $t8, $t0
 	addi $t1, $t1, -1
 	bgez $t1, pet1
 ########################################################################################################################	
-endP:	
-	li $v0, 15
+endP:	li $v0, 15
 	addu $a0, $s2, $0
 	addu $a1, $t8, $0
 	addu $a2, $t3, $0
